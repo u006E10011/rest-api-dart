@@ -27,6 +27,11 @@ class Database<T extends Identifiable> {
     saveToFile();
   }
 
+  void delete(T item) {
+    data.remove(item.id);
+    saveToFile();
+  }
+
   String getNewId() => (index++).toString();
 
   Future<void> saveToFile() async {

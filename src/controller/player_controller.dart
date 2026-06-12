@@ -112,4 +112,38 @@ class PlayerController {
       await request.response.close();
     }
   }
+
+  // PUT
+  Future<void> _updatePut(HttpRequest request, String id) async {
+    try {
+      var item = _db.getById(id);
+
+      if (item == null) {
+        request.response
+          ..statusCode = HttpStatus.notFound
+          ..write(debug.send({"message": "Player not found by id: $id]"}));
+      }
+
+      final body = await utf8.decodeStream(request);
+      final json = jsonDecode(body);
+      final updateData = PlayerModel(
+        id: id,
+        title: json['title'] ?? '',
+        level: json['level'] ?? "1",
+        inventory: Inventory(json['inventory'] ?? {}),
+      );
+
+      _db.add(updateData); // <--- TODO
+    } on FormatException {
+      request.response
+        ..statusCode = HttpStatus.badRequest
+        ..write(jsonEncode(debug.formatException()));
+    } catch (e) {
+      request.response
+        ..statusCode = HttpStatus.internalServerError
+        ..write(jsonEncode(debug.internalServerError()));
+    } finally {
+      await request.response.close();
+    }
+  }
 }
