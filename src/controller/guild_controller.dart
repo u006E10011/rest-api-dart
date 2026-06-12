@@ -5,7 +5,11 @@ import '../model/database_model.dart';
 import '../model/guild_model.dart';
 
 class GuildController {
-  final _database = Database<GuildModel>();
+  final _db = Database<GuildModel>(
+    filePath: "./data/guild.json",
+    fromJsonFactory: GuildModel.fromJson,
+  );
+
   final debug = Debug();
 
   Future<void> handleRequest(HttpRequest request, List<String> segments) async {
@@ -23,7 +27,9 @@ class GuildController {
       request.response
         ..statusCode = HttpStatus.notFound
         ..write(
-          jsonEncode(debug.send({"error": "Маршрут в /guild не найден"})),
+          jsonEncode(
+            debug.send({"error": "The route to /guild was not found"}),
+          ),
         );
       await request.response.close();
     }
@@ -31,7 +37,7 @@ class GuildController {
 
   // GET
   Future<void> _getById(HttpRequest request, String id) async {
-    final guild = _database.getById(id);
+    final guild = _db.getById(id);
 
     if (guild == null) {
       request.response
@@ -53,17 +59,35 @@ class GuildController {
     try {
       final body = await utf8.decodeStream(request);
       final json = jsonDecode(body);
-      final guild = GuildModel(id: _database.getNewId(), title: json['title']);
 
-      if (guild.title.isNotEmpty) {
-        _database.add(guild);
-        request.response
-          ..statusCode = HttpStatus.created
-          ..write(
-            debug.send({
-              'message': 'Register guild ${guild.title}/${guild.id}',
-            }),
-          );
+      if (json['title'].isNotEmpty) {
+        bool hasTitle = false;
+        _db.data.forEach(
+          ((key, value) => {if (value.title == json['title']) hasTitle = true}),
+        );
+
+        if (hasTitle == false) {
+          final guild = GuildModel(id: _db.getNewId(), title: json['title']);
+          _db.add(guild);
+          request.response
+            ..statusCode = HttpStatus.created
+            ..write(
+              debug.send({
+                'message': 'Register guild ${guild.title}/${guild.id}',
+              }),
+            );
+        } else {
+          request.response
+            ..statusCode = HttpStatus.badRequest
+            ..write(
+              jsonEncode(
+                debug.send({
+                  "message":
+                      "The name guild is already taken [${json['title']}]",
+                }),
+              ),
+            );
+        }
       }
     } on FormatException {
       request.response

@@ -5,7 +5,7 @@ class Debug {
   }
 
   Map<String, dynamic> formatException() {
-    return send({"message": "Некорректный формат JSON"});
+    return send({"message": "Incorrect format JSON"});
   }
 
   Map<String, dynamic> internalServerError() {

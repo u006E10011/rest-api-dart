@@ -17,14 +17,14 @@ class PlayerModel implements Identifiable, Describable {
 
   PlayerModel.fromJson(Map<String, dynamic> json)
     : id = json['id'],
-      title = json['name'],
+      title = json['title'],
       level = json['level'],
       inventory = json['inventory'];
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'name': title,
+      'title': title,
       'level': level,
       'inventory': inventory.toJson(),
     };

@@ -5,7 +5,10 @@ import '../model/database_model.dart';
 import '../model/player_model.dart';
 
 class PlayerController {
-  final _db = Database<PlayerModel>();
+  final _db = Database<PlayerModel>(
+    filePath: './data/player.json',
+    fromJsonFactory: PlayerModel.fromJson,
+  );
   final debug = Debug();
 
   Future<void> handleRequest(HttpRequest request, List<String> segments) async {
@@ -23,12 +26,15 @@ class PlayerController {
       request.response
         ..statusCode = HttpStatus.notFound
         ..write(
-          jsonEncode(debug.send({"error": "Маршрут в /player не найден"})),
+          jsonEncode(
+            debug.send({"error": "The route to /player was not found"}),
+          ),
         );
       await request.response.close();
     }
   }
 
+  // GET
   Future<void> _getById(HttpRequest request, String id) async {
     final player = _db.getById(id);
 
@@ -49,30 +55,50 @@ class PlayerController {
     await request.response.close();
   }
 
+  // POST
   Future<void> _create(HttpRequest request) async {
     try {
       final body = await utf8.decodeStream(request);
       final Map<String, dynamic> data = jsonDecode(body);
 
-      final player = PlayerModel(
-        id: _db.getNewId(),
-        title: data['title'],
-        level: data['level'],
-        inventory: Inventory(data['inventory']),
-      );
+      if (data['title'].isNotEmpty) {
+        bool hasTitle = false;
+        _db.data.forEach(
+          ((key, value) => {if (value.title == data['title']) hasTitle = true}),
+        );
 
-      if (player.title.isNotEmpty) {
-        _db.add(player);
-
-        request.response
-          ..statusCode = HttpStatus.created
-          ..write(
-            jsonEncode(
-              debug.send({
-                "message": "Ник ${player.title}/${player.id} успешно добавлен!",
-              }),
-            ),
+        if (hasTitle == false) {
+          final player = PlayerModel(
+            id: _db.getNewId(),
+            title: data['title'],
+            level: data['level'],
+            inventory: Inventory(data['inventory']),
           );
+
+          _db.add(player);
+
+          request.response
+            ..statusCode = HttpStatus.created
+            ..write(
+              jsonEncode(
+                debug.send({
+                  "message":
+                      "Player ${player.title}/${player.id} successfully added!",
+                }),
+              ),
+            );
+        } else {
+          request.response
+            ..statusCode = HttpStatus.badRequest
+            ..write(
+              jsonEncode(
+                debug.send({
+                  "message":
+                      "The player name is already taken [${data['title']}}]",
+                }),
+              ),
+            );
+        }
       }
     } on FormatException {
       request.response

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'controller/guild_controller.dart';
 import 'controller/player_controller.dart';
 
@@ -20,7 +21,7 @@ Future<void> playLoop(HttpServer server) async {
     try {
       await routeRequest(request);
     } catch (e) {
-      print("Критическая ошибка роутинга: $e");
+      print("Routing error: $e");
     }
   }
 }
@@ -30,7 +31,7 @@ Future<void> routeRequest(HttpRequest request) async {
   print('Request received: ${request.method} ${request.uri.path}');
 
   if (segments.isEmpty) {
-    request.response.write('Главная страница');
+    request.response.write('Main page');
     await request.response.close();
     return;
   }
@@ -51,7 +52,7 @@ Future<void> routeRequest(HttpRequest request) async {
     default:
       request.response
         ..statusCode = HttpStatus.notFound
-        ..write('Упс! Раздел не найден.');
+        ..write('The section was not found.');
       await request.response.close();
   }
 }
@@ -59,8 +60,8 @@ Future<void> routeRequest(HttpRequest request) async {
 Future<void> getStatusAsync(HttpRequest request) async {
   final serverStatus = {
     'status': 'online',
-    'playersCount': 42,
-    'version': '1.0.5',
+    'playersCount': Random().nextInt(100),
+    'version': '1.0.8',
   };
 
   request.response
