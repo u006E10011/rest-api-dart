@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
+import 'controller/guild_controller.dart';
 import 'controller/player_controller.dart';
 
 final playerController = PlayerController();
+final guildController = GuildController();
 
 void main() async {
   final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 8080);
@@ -40,6 +42,10 @@ Future<void> routeRequest(HttpRequest request) async {
 
     case 'player':
       await playerController.handleRequest(request, segments);
+      break;
+
+    case 'guild':
+      await guildController.handleRequest(request, segments);
       break;
 
     default:

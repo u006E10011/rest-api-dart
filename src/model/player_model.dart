@@ -1,29 +1,30 @@
 import 'database_model.dart';
 
-class PlayerModel implements Identifiable {
+class PlayerModel implements Identifiable, Describable {
   @override
   final String id;
-  final String name;
+  @override
+  final String title;
   final int level;
   final Inventory inventory;
 
   PlayerModel({
     required this.id,
-    required this.name,
+    required this.title,
     required this.level,
     required this.inventory,
   });
 
   PlayerModel.fromJson(Map<String, dynamic> json)
     : id = json['id'],
-      name = json['name'],
+      title = json['name'],
       level = json['level'],
       inventory = json['inventory'];
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'name': name,
+      'name': title,
       'level': level,
       'inventory': inventory.toJson(),
     };
