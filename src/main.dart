@@ -1,14 +1,18 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
+import 'debug.dart';
 import 'player_model.dart';
 import 'test_data.dart';
 
 final nick = Nick();
+final playerDatabase = PlayerDatabase();
+final debug = Debug();
 
 void main() async {
   final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 8080);
-  print('The server is running on http://${server.address.address}:${server.port}');
+  print(
+    'The server is running on http://${server.address.address}:${server.port}',
+  );
 
   await for (HttpRequest request in server) {
     handleRequest(request);
@@ -16,17 +20,21 @@ void main() async {
 }
 
 Future<void> handleRequest(HttpRequest request) async {
-  final path = request.uri.path;
+  final segments = request.uri.pathSegments;
   final method = request.method;
 
-  print('Получен запрос: $method $path');
+  print('Request received: $method ${request.uri.path}');
 
-  if (path == '/status' && method == 'GET') {
-    getStatusAsync(request);
-  } else if (path == "/player" && method == "GET") {
-    getPlayerDataAsync(request);
-  } else if (path == "/player" && method == "POST") {
-    addPlayerAsync(request);
+  if (segments.isNotEmpty && method == "GET") {
+    if (segments[0] == 'status') {
+      getStatusAsync(request);
+    } else if (segments[0] == 'player' && segments.length == 2) {
+      getPlayerDataAsync(request, segments[1]);
+    }
+  } else if (segments.isNotEmpty && method == "POST") {
+    if (segments[0] == "player") {
+      addPlayerAsync(request);
+    }
   } else {
     request.response.statusCode = HttpStatus.notFound;
     request.response.write('Упс! Страница не найдена.');
@@ -47,15 +55,22 @@ Future<void> getStatusAsync(HttpRequest request) async {
   await request.response.close();
 }
 
-Future<void> getPlayerDataAsync(HttpRequest request) async {
-  final data = PlayerModel(
-    name: nick.getRadnomNick(),
-    level: Random().nextInt(100),
-    inventory: Inventory().addItem(TestInventory().inventory!)
-  );
+Future<void> getPlayerDataAsync(HttpRequest request, String id) async {
+  var player = playerDatabase.getPlayerById(id);
 
-  request.response.headers.contentType = ContentType.json;
-  request.response.write(jsonEncode(data.toJson()));
+  if (player == null) {
+    request.response
+      ..statusCode = HttpStatus.notFound
+      ..write({"error": "Player by id ($id) no found"});
+
+    await request.response.close();
+    return;
+  }
+
+  request.response
+    ..statusCode = HttpStatus.ok
+    ..headers.contentType = ContentType.json
+    ..write(jsonEncode(player.toJson()));
   await request.response.close();
 }
 
@@ -64,28 +79,33 @@ Future<void> addPlayerAsync(HttpRequest request) async {
   try {
     final body = await utf8.decodeStream(request);
     final Map<String, dynamic> data = jsonDecode(body);
-    final String name = data['name'];
+    final player = PlayerModel(
+      id: playerDatabase.getNewId(),
+      name: data['name'],
+      level: data['level'],
+      inventory: Inventory(data['inventory']),
+    );
 
-    if (name.isNotEmpty) {
-      nick.addNick(name);
+    if (player.name.isNotEmpty) {
+      playerDatabase.addPlayer(player);
 
       request.response
         ..statusCode = HttpStatus.created
         ..write(
-          jsonEncode({
+          jsonEncode(debug.send({
             "status": 201,
-            "message": "Ник $name успешно добавлен!",
-          }),
+            "message": "Ник ${player.name} успешно добавлен!",
+          })),
         );
     }
   } on FormatException {
     request.response
       ..statusCode = HttpStatus.badRequest
-      ..write(jsonEncode({"error": "Некорректный формат JSON"}));
+      ..write(jsonEncode(debug.send({"error": "Некорректный формат JSON"})));
   } catch (e) {
     request.response
       ..statusCode = HttpStatus.internalServerError
-      ..write(jsonEncode({"error": "Internal server error"}));
+      ..write(jsonEncode(debug.send({"error": "Internal server error"})));
   } finally {
     await request.response.close();
   }
