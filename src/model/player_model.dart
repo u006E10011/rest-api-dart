@@ -1,21 +1,7 @@
-class PlayerDatabase {
-  int createdPlayer = 0;
-  final Map<String, PlayerModel> _data = {};
+import 'database_model.dart';
 
-  PlayerModel? getPlayerById(String id) {
-    return _data[id];
-  }
-
-  void addPlayer(PlayerModel player) {
-    _data[player.id] = player;
-  }
-
-  String getNewId() {
-    return (createdPlayer++).toString();
-  }
-}
-
-class PlayerModel {
+class PlayerModel implements Identifiable {
+  @override
   final String id;
   final String name;
   final int level;
@@ -39,7 +25,7 @@ class PlayerModel {
       'id': id,
       'name': name,
       'level': level,
-      'inventory': inventory.toJson()
+      'inventory': inventory.toJson(),
     };
   }
 }
