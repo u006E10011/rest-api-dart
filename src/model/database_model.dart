@@ -32,6 +32,15 @@ class Database<T extends Identifiable> {
     saveToFile();
   }
 
+  bool existingTitle(String title) {
+    return data.values.any((item) {
+      if (item is Describable) {
+        return (item as Describable).title.toLowerCase() == title.toLowerCase();
+      }
+      return false;
+    });
+  }
+
   String getNewId() => (index++).toString();
 
   Future<void> saveToFile() async {

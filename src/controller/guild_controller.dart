@@ -3,6 +3,7 @@ import 'dart:io';
 import '../utils/debug.dart';
 import '../model/database_model.dart';
 import '../model/guild_model.dart';
+import '../utils/extension.dart';
 
 class GuildController {
   final _db = Database<GuildModel>(
@@ -59,35 +60,21 @@ class GuildController {
     try {
       final body = await utf8.decodeStream(request);
       final json = jsonDecode(body);
+      final guild = GuildModel(id: _db.getNewId(), title: json['title']);
 
-      if (json['title'].isNotEmpty) {
-        bool hasTitle = false;
-        _db.data.forEach(
-          ((key, value) => {if (value.title == json['title']) hasTitle = true}),
-        );
+      if (await request.hasConflictTitle(_db, json['title'])) {
+        return;
+      }
 
-        if (hasTitle == false) {
-          final guild = GuildModel(id: _db.getNewId(), title: json['title']);
-          _db.add(guild);
-          request.response
-            ..statusCode = HttpStatus.created
-            ..write(
-              debug.send({
-                'message': 'Register guild ${guild.title}/${guild.id}',
-              }),
-            );
-        } else {
-          request.response
-            ..statusCode = HttpStatus.badRequest
-            ..write(
-              jsonEncode(
-                debug.send({
-                  "message":
-                      "The name guild is already taken [${json['title']}]",
-                }),
-              ),
-            );
-        }
+      if (guild.title.isNotEmpty) {
+        _db.add(guild);
+        request.response
+          ..statusCode = HttpStatus.created
+          ..write(
+            debug.send({
+              'message': 'Register guild ${guild.title}/${guild.id}',
+            }),
+          );
       }
     } on FormatException {
       request.response
